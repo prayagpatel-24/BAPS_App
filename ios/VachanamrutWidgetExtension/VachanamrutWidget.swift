@@ -121,6 +121,10 @@ private enum WidgetState {
       UserDefaults.standard.set(newValue, forKey: showMeaningKey)
     }
   }
+
+  static func toggleMeaning() {
+    showMeaning.toggle()
+  }
 }
 
 @main
