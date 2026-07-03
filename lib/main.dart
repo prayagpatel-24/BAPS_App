@@ -59,13 +59,16 @@ class QuoteHomePage extends StatefulWidget {
 
 class _QuoteHomePageState extends State<QuoteHomePage> {
   static const _widgetChannel = MethodChannel('vachanamrut_app/widget');
+  static const _quoteRotationInterval = Duration(hours: 1);
 
   late final Future<List<VachanamrutQuote>> _quotes = QuoteRepository.load();
   bool _showMeaningPreview = false;
 
   Future<void> _requestWidgetPin() async {
-    if (defaultTargetPlatform != TargetPlatform.android) {
-      _showMessage('Home-screen widgets are being tested on Android first.');
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      _showMessage(
+        'Long-press your iPhone home screen, tap +, then add Vachanamrut Daily.',
+      );
       return;
     }
 
@@ -75,27 +78,46 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
       );
       if (!mounted) return;
       _showMessage(
-        pinned == true
-            ? 'Choose where to place the Vachanamrut widget.'
-            : 'Long-press your home screen and add the Vachanamrut widget.',
+        switch (defaultTargetPlatform) {
+          TargetPlatform.android when pinned == true =>
+            'Choose where to place the Vachanamrut widget.',
+          TargetPlatform.android =>
+            'Long-press your home screen and add the Vachanamrut widget.',
+          _ => 'Long-press your home screen and add the Vachanamrut widget.',
+        },
       );
-    } on PlatformException {
+    } on PlatformException catch (_) {
       if (!mounted) return;
-      _showMessage(
-        'Long-press your home screen and add the Vachanamrut widget.',
-      );
+      _showMessage(_manualWidgetInstallMessage());
+    } on MissingPluginException catch (_) {
+      if (!mounted) return;
+      _showMessage(_manualWidgetInstallMessage());
     }
   }
 
   Future<void> _refreshWidgets() async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      _showMessage('iPhone widgets update automatically every hour.');
+      return;
+    }
+
     try {
       await _widgetChannel.invokeMethod<void>('refreshWidgets');
       if (!mounted) return;
       _showMessage('Widgets refreshed.');
-    } on PlatformException {
+    } on PlatformException catch (_) {
       if (!mounted) return;
-      _showMessage('Widget refresh is available after installing on Android.');
+      _showMessage(_manualWidgetInstallMessage());
+    } on MissingPluginException catch (_) {
+      if (!mounted) return;
+      _showMessage(_manualWidgetInstallMessage());
     }
+  }
+
+  String _manualWidgetInstallMessage() {
+    return defaultTargetPlatform == TargetPlatform.iOS
+        ? 'Long-press your iPhone home screen, tap +, then add Vachanamrut Daily.'
+        : 'Long-press your home screen and add the Vachanamrut widget.';
   }
 
   void _showMessage(String message) {
@@ -129,7 +151,7 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
             return const Center(child: Text('No quotes are available yet.'));
           }
 
-          final currentQuote = quotes[DateTime.now().hour ~/ 4 % quotes.length];
+          final currentQuote = _quoteForDate(DateTime.now(), quotes);
 
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -151,6 +173,12 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
         },
       ),
     );
+  }
+
+  VachanamrutQuote _quoteForDate(DateTime date, List<VachanamrutQuote> quotes) {
+    final intervalIndex =
+        date.millisecondsSinceEpoch ~/ _quoteRotationInterval.inMilliseconds;
+    return quotes[intervalIndex % quotes.length];
   }
 }
 

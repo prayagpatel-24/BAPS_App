@@ -52,7 +52,7 @@ class VachanamrutWidgetProvider : AppWidgetProvider() {
         private const val ACTION_TOGGLE_WIDGET =
             "com.example.vachanamrut_app.ACTION_TOGGLE_WIDGET"
         private const val PREFS_NAME = "vachanamrut_widget_preferences"
-        private const val ROTATION_INTERVAL_MILLIS = 4L * 60L * 60L * 1000L
+        private const val ROTATION_INTERVAL_MILLIS = 60L * 60L * 1000L
 
         fun refreshAll(context: Context) {
             val appWidgetManager = AppWidgetManager.getInstance(context)
