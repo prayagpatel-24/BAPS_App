@@ -1,8 +1,14 @@
-import 'dart:convert';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'models/vachanamrut_quote.dart';
+import 'services/app_settings_service.dart';
+import 'services/quote_repository.dart';
+import 'widgets/mukhpath_page.dart';
+import 'widgets/quote_card.dart';
+import 'widgets/settings_page.dart';
+import 'widgets/today_panel.dart';
 
 void main() {
   runApp(const VachanamrutApp());
@@ -45,25 +51,87 @@ class VachanamrutApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const QuoteHomePage(),
+      home: const HomeShellPage(),
     );
   }
 }
 
-class QuoteHomePage extends StatefulWidget {
-  const QuoteHomePage({super.key});
+class HomeShellPage extends StatefulWidget {
+  const HomeShellPage({super.key});
 
   @override
-  State<QuoteHomePage> createState() => _QuoteHomePageState();
+  State<HomeShellPage> createState() => _HomeShellPageState();
 }
 
-class _QuoteHomePageState extends State<QuoteHomePage> {
+class _HomeShellPageState extends State<HomeShellPage> {
+  final AppSettingsService _settingsService = AppSettingsService();
+  int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    await _settingsService.initialize();
+    if (!mounted) return;
+    setState(() {
+      _selectedIndex = _settingsService.appMode == AppMode.mukhpath ? 1 : 0;
+    });
+  }
+
+  Future<void> _onDestinationSelected(int index) async {
+    await _settingsService.setAppMode(
+      index == 1 ? AppMode.mukhpath : AppMode.vachanamrut,
+    );
+    if (!mounted) return;
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          VachanamrutHomePage(settingsService: _settingsService),
+          MukhpathPage(settingsService: _settingsService),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: _onDestinationSelected,
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.auto_stories_rounded),
+            label: 'Vachanamrut',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.quiz_rounded),
+            label: 'Mukhpath',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class VachanamrutHomePage extends StatefulWidget {
+  const VachanamrutHomePage({super.key, required this.settingsService});
+
+  final AppSettingsService settingsService;
+
+  @override
+  State<VachanamrutHomePage> createState() => _VachanamrutHomePageState();
+}
+
+class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
   static const _widgetChannel = MethodChannel('vachanamrut_app/widget');
-  static const _quoteRotationInterval = Duration(hours: 1);
 
   late final Future<List<VachanamrutQuote>> _quotes = QuoteRepository.load();
-  bool _showMeaningPreview = false;
-
   Future<void> _requestWidgetPin() async {
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       _showMessage(
@@ -73,9 +141,7 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
     }
 
     try {
-      final pinned = await _widgetChannel.invokeMethod<bool>(
-        'requestPinWidget',
-      );
+      final pinned = await _widgetChannel.invokeMethod<bool>('requestPinWidget');
       if (!mounted) return;
       _showMessage(
         switch (defaultTargetPlatform) {
@@ -114,6 +180,16 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
     }
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => SettingsPage(settingsService: widget.settingsService),
+      ),
+    );
+    if (!mounted) return;
+    setState(() {});
+  }
+
   String _manualWidgetInstallMessage() {
     return defaultTargetPlatform == TargetPlatform.iOS
         ? 'Long-press your iPhone home screen, tap +, then add Vachanamrut Daily.'
@@ -126,12 +202,39 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
+  String _languageLabel(AppLanguage language) {
+    switch (language) {
+      case AppLanguage.english:
+        return 'English';
+      case AppLanguage.gujarati:
+        return 'Gujarati';
+      case AppLanguage.gujaratiWithEnglish:
+        return 'Gujarati with English Translation';
+    }
+  }
+
+  String _intervalLabel(Duration interval) {
+    if (interval.inMinutes % 60 == 0 && interval.inMinutes >= 60) {
+      final hours = interval.inHours;
+      return hours == 1 ? '1 hour' : '$hours hours';
+    }
+    return '${interval.inMinutes} minutes';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final language = widget.settingsService.displayLanguage;
+    final intervalLabel = _intervalLabel(widget.settingsService.quoteInterval);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vachanamrut Daily'),
         actions: [
+          IconButton(
+            onPressed: _openSettings,
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_rounded),
+          ),
           IconButton(
             onPressed: _refreshWidgets,
             tooltip: 'Refresh widgets',
@@ -156,17 +259,41 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
           return ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
             children: [
-              _TodayPanel(quote: currentQuote),
+              TodayPanel(quote: currentQuote, language: language),
               const SizedBox(height: 14),
-              _WidgetPreviewCard(
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.schedule_rounded, color: Color(0xFFF58220)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Rotation interval',
+                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            Text(
+                              'Quote changes every $intervalLabel',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              QuoteCard(
                 quote: currentQuote,
-                showMeaning: _showMeaningPreview,
-                onToggle: () {
-                  setState(() {
-                    _showMeaningPreview = !_showMeaningPreview;
-                  });
-                },
                 onAddWidget: _requestWidgetPin,
+                displayLanguage: language,
               ),
             ],
           );
@@ -176,210 +303,8 @@ class _QuoteHomePageState extends State<QuoteHomePage> {
   }
 
   VachanamrutQuote _quoteForDate(DateTime date, List<VachanamrutQuote> quotes) {
-    final intervalIndex =
-        date.millisecondsSinceEpoch ~/ _quoteRotationInterval.inMilliseconds;
+    final interval = widget.settingsService.quoteInterval;
+    final intervalIndex = date.millisecondsSinceEpoch ~/ interval.inMilliseconds;
     return quotes[intervalIndex % quotes.length];
-  }
-}
-
-class _TodayPanel extends StatelessWidget {
-  const _TodayPanel({required this.quote});
-
-  final VachanamrutQuote quote;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF58220),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.auto_stories_rounded,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      quote.reference,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.88),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      quote.title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            quote.quote,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              height: 1.18,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WidgetPreviewCard extends StatelessWidget {
-  const _WidgetPreviewCard({
-    required this.quote,
-    required this.showMeaning,
-    required this.onToggle,
-    required this.onAddWidget,
-  });
-
-  final VachanamrutQuote quote;
-  final bool showMeaning;
-  final VoidCallback onToggle;
-  final VoidCallback onAddWidget;
-
-  @override
-  Widget build(BuildContext context) {
-    final body = showMeaning ? quote.meaning : quote.quote;
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Icon(Icons.widgets_rounded, color: Color(0xFFF58220)),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Widget Preview',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                FilledButton.icon(
-                  onPressed: onAddWidget,
-                  icon: const Icon(Icons.add_to_home_screen_rounded),
-                  label: const Text('Add'),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: onToggle,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                width: double.infinity,
-                constraints: const BoxConstraints(minHeight: 154),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF4EA),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFF5C99F)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      showMeaning ? 'English Meaning' : quote.reference,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: const Color(0xFF8A4B12),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      body,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: const Color(0xFF2D241D),
-                        fontWeight: FontWeight.w700,
-                        height: 1.32,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    Text(
-                      showMeaning
-                          ? 'Tap to return to Gujarati'
-                          : 'Tap to see meaning',
-                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        color: const Color(0xFF7D7067),
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class VachanamrutQuote {
-  const VachanamrutQuote({
-    required this.reference,
-    required this.title,
-    required this.quote,
-    required this.meaning,
-  });
-
-  factory VachanamrutQuote.fromJson(Map<String, Object?> json) {
-    return VachanamrutQuote(
-      reference: json['reference'] as String,
-      title: json['title'] as String,
-      quote: json['quote'] as String,
-      meaning: json['meaning'] as String,
-    );
-  }
-
-  final String reference;
-  final String title;
-  final String quote;
-  final String meaning;
-}
-
-class QuoteRepository {
-  const QuoteRepository._();
-
-  static Future<List<VachanamrutQuote>> load() async {
-    final jsonText = await rootBundle.loadString(
-      'assets/vachanamrut_quotes.json',
-    );
-    final decoded = jsonDecode(jsonText) as List<Object?>;
-    return decoded
-        .cast<Map<String, Object?>>()
-        .map(VachanamrutQuote.fromJson)
-        .toList(growable: false);
   }
 }

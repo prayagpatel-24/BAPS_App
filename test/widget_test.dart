@@ -9,24 +9,17 @@ void main() {
 
     expect(find.text('Vachanamrut Daily'), findsOneWidget);
     expect(find.text('Widget Preview'), findsOneWidget);
-    expect(find.textContaining('Quote'), findsWidgets);
     expect(find.byWidgetPredicate(_hasGujaratiText), findsWidgets);
     expect(find.byIcon(Icons.widgets_rounded), findsOneWidget);
   });
 
-  testWidgets('widget preview toggles between quote and meaning', (
+  testWidgets('shows an English translation button for Gujarati mode', (
     tester,
   ) async {
     await tester.pumpWidget(const VachanamrutApp());
-    await pumpUntilFound(tester, find.text('Tap to see meaning'));
+    await pumpUntilFound(tester, find.text('Show English'));
 
-    expect(find.text('Tap to see meaning'), findsOneWidget);
-
-    await tester.tap(find.text('Tap to see meaning'));
-    await tester.pump();
-
-    expect(find.text('English Meaning'), findsOneWidget);
-    expect(find.text('Tap to return to Gujarati'), findsOneWidget);
+    expect(find.text('Show English'), findsOneWidget);
   });
 }
 
