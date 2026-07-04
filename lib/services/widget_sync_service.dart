@@ -17,6 +17,7 @@ class WidgetSyncService {
     await settingsService.initialize();
     final payload = <String, dynamic>{
       'appMode': settingsService.appMode.name,
+      'widgetContentMode': settingsService.widgetContentMode.name,
       'quoteIntervalMinutes': settingsService.quoteInterval.inMinutes,
       'mukhpathIntervalMinutes': settingsService.mukhpathInterval.inMinutes,
       'language': settingsService.displayLanguage.name,

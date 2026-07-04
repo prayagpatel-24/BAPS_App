@@ -70,7 +70,7 @@ class VachanamrutWidgetProvider : AppWidgetProvider() {
         ) {
             val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val widgetState = WidgetState.fromPreferences(preferences)
-            val content = when (widgetState.appMode) {
+            val content = when (widgetState.widgetContentMode) {
                 "mukhpath" -> widgetState.mukhpathContentForNow()
                 else -> widgetState.quoteContentForNow()
             }
@@ -112,6 +112,7 @@ private data class WidgetContent(
 
 private data class WidgetState(
     val appMode: String,
+    val widgetContentMode: String,
     val language: String,
     val quoteIntervalMinutes: Int,
     val mukhpathIntervalMinutes: Int,
@@ -153,6 +154,7 @@ private data class WidgetState(
     companion object {
         fun fromPreferences(preferences: android.content.SharedPreferences): WidgetState {
             val appMode = preferences.getString("appMode", "vachanamrut") ?: "vachanamrut"
+            val widgetContentMode = preferences.getString("widgetContentMode", "vachanamrut") ?: "vachanamrut"
             val language = preferences.getString("language", "gujarati") ?: "gujarati"
             val quoteIntervalMinutes = preferences.getInt("quoteIntervalMinutes", 60)
             val mukhpathIntervalMinutes = preferences.getInt("mukhpathIntervalMinutes", 60)
@@ -161,6 +163,7 @@ private data class WidgetState(
             val mukhpathItems = parseMukhpath(preferences.getString("mukhpathJson", null) ?: "[]")
             return WidgetState(
                 appMode = appMode,
+                widgetContentMode = widgetContentMode,
                 language = language,
                 quoteIntervalMinutes = quoteIntervalMinutes,
                 mukhpathIntervalMinutes = mukhpathIntervalMinutes,

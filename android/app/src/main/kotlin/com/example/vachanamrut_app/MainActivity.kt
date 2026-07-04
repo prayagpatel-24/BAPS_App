@@ -59,6 +59,7 @@ class MainActivity : FlutterActivity() {
         val preferences = context.getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE)
         val editor = preferences.edit()
         editor.putString("appMode", payload["appMode"] as? String ?: "vachanamrut")
+        editor.putString("widgetContentMode", payload["widgetContentMode"] as? String ?: "vachanamrut")
         editor.putInt("quoteIntervalMinutes", (payload["quoteIntervalMinutes"] as? Number)?.toInt() ?: 60)
         editor.putInt("mukhpathIntervalMinutes", (payload["mukhpathIntervalMinutes"] as? Number)?.toInt() ?: 60)
         editor.putString("language", payload["language"] as? String ?: "gujarati")

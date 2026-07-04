@@ -2,6 +2,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 enum AppMode { vachanamrut, mukhpath }
 
+enum WidgetContentMode { vachanamrut, mukhpath }
+
 enum AppLanguage { english, gujarati, gujaratiWithEnglish }
 
 class AppSettingsService {
@@ -10,6 +12,7 @@ class AppSettingsService {
   static const _quoteIntervalKey = 'quote_interval_minutes';
   static const _displayLanguageKey = 'display_language';
   static const _appModeKey = 'app_mode';
+  static const _widgetContentModeKey = 'widget_content_mode';
   static const _mukhpathIntervalKey = 'mukhpath_interval_minutes';
   static const _completedMukhpathKey = 'completed_mukhpath_ids';
 
@@ -45,6 +48,14 @@ class AppSettingsService {
     );
   }
 
+  WidgetContentMode get widgetContentMode {
+    final value = _preferences?.getString(_widgetContentModeKey);
+    return WidgetContentMode.values.firstWhere(
+      (mode) => mode.name == value,
+      orElse: () => WidgetContentMode.vachanamrut,
+    );
+  }
+
   Set<String> get completedMukhpathIds {
     return _preferences
             ?.getStringList(_completedMukhpathKey)
@@ -70,6 +81,11 @@ class AppSettingsService {
   Future<void> setAppMode(AppMode mode) async {
     await initialize();
     await _preferences!.setString(_appModeKey, mode.name);
+  }
+
+  Future<void> setWidgetContentMode(WidgetContentMode mode) async {
+    await initialize();
+    await _preferences!.setString(_widgetContentModeKey, mode.name);
   }
 
   Future<void> toggleMukhpathCompletion(String id) async {

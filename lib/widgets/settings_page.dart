@@ -20,6 +20,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late Duration _quoteInterval;
   late Duration _mukhpathInterval;
   late AppLanguage _language;
+  late WidgetContentMode _widgetContentMode;
 
   final _quoteOptions = <Duration>[
     const Duration(minutes: 15),
@@ -50,6 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _quoteInterval = widget.settingsService.quoteInterval;
     _mukhpathInterval = widget.settingsService.mukhpathInterval;
     _language = widget.settingsService.displayLanguage;
+    _widgetContentMode = widget.settingsService.widgetContentMode;
   }
 
   @override
@@ -121,6 +123,27 @@ class _SettingsPageState extends State<SettingsPage> {
               },
             ),
           ),
+          const SizedBox(height: 12),
+          _SettingsSection(
+            title: 'Widget content mode',
+            child: DropdownButtonFormField<WidgetContentMode>(
+              initialValue: _widgetContentMode,
+              items: WidgetContentMode.values
+                  .map(
+                    (mode) => DropdownMenuItem(
+                      value: mode,
+                      child: Text(_widgetModeLabel(mode)),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) async {
+                if (value == null) return;
+                setState(() => _widgetContentMode = value);
+                await widget.settingsService.setWidgetContentMode(value);
+                widget.onSettingsChanged?.call();
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -142,6 +165,15 @@ class _SettingsPageState extends State<SettingsPage> {
         return 'Gujarati';
       case AppLanguage.gujaratiWithEnglish:
         return 'Gujarati with English Translation';
+    }
+  }
+
+  String _widgetModeLabel(WidgetContentMode mode) {
+    switch (mode) {
+      case WidgetContentMode.vachanamrut:
+        return 'Regular Vachanamrut';
+      case WidgetContentMode.mukhpath:
+        return 'Mukhpath';
     }
   }
 }
