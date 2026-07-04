@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import '../services/app_settings_service.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({super.key, required this.settingsService});
+  const SettingsPage({
+    super.key,
+    required this.settingsService,
+    this.onSettingsChanged,
+  });
 
   final AppSettingsService settingsService;
+  final VoidCallback? onSettingsChanged;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -57,7 +62,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _SettingsSection(
             title: 'Vachanamrut quote timing',
             child: DropdownButtonFormField<Duration>(
-              value: _quoteInterval,
+              initialValue: _quoteInterval,
               items: _quoteOptions
                   .map(
                     (option) => DropdownMenuItem(
@@ -70,6 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _quoteInterval = value);
                 await widget.settingsService.setQuoteInterval(value);
+                widget.onSettingsChanged?.call();
               },
             ),
           ),
@@ -77,7 +83,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _SettingsSection(
             title: 'Mukhpath timing',
             child: DropdownButtonFormField<Duration>(
-              value: _mukhpathInterval,
+              initialValue: _mukhpathInterval,
               items: _mukhpathOptions
                   .map(
                     (option) => DropdownMenuItem(
@@ -90,6 +96,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _mukhpathInterval = value);
                 await widget.settingsService.setMukhpathInterval(value);
+                widget.onSettingsChanged?.call();
               },
             ),
           ),
@@ -97,7 +104,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _SettingsSection(
             title: 'Display language',
             child: DropdownButtonFormField<AppLanguage>(
-              value: _language,
+              initialValue: _language,
               items: AppLanguage.values
                   .map(
                     (language) => DropdownMenuItem(
@@ -110,6 +117,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _language = value);
                 await widget.settingsService.setDisplayLanguage(value);
+                widget.onSettingsChanged?.call();
               },
             ),
           ),

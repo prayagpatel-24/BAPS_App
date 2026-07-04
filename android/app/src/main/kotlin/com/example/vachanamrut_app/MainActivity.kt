@@ -8,6 +8,8 @@ import android.os.Build
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONArray
+import org.json.JSONObject
 
 class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -18,6 +20,12 @@ class MainActivity : FlutterActivity() {
                 when (call.method) {
                     "requestPinWidget" -> result.success(requestPinWidget())
                     "refreshWidgets" -> {
+                        VachanamrutWidgetProvider.refreshAll(this)
+                        result.success(null)
+                    }
+                    "syncState" -> {
+                        val payload = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                        persistWidgetState(this, payload)
                         VachanamrutWidgetProvider.refreshAll(this)
                         result.success(null)
                     }
@@ -47,7 +55,47 @@ class MainActivity : FlutterActivity() {
         return true
     }
 
+    private fun persistWidgetState(context: Context, payload: Map<*, *>) {
+        val preferences = context.getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE)
+        val editor = preferences.edit()
+        editor.putString("appMode", payload["appMode"] as? String ?: "vachanamrut")
+        editor.putInt("quoteIntervalMinutes", (payload["quoteIntervalMinutes"] as? Number)?.toInt() ?: 60)
+        editor.putInt("mukhpathIntervalMinutes", (payload["mukhpathIntervalMinutes"] as? Number)?.toInt() ?: 60)
+        editor.putString("language", payload["language"] as? String ?: "gujarati")
+        val completedIds = payload["completedMukhpathIds"] as? List<*>
+        editor.putStringSet("completedMukhpathIds", completedIds?.filterIsInstance<String>()?.toSet() ?: emptySet())
+        val quotes = payload["quotes"] as? List<*>
+        if (quotes != null) {
+            val array = JSONArray()
+            quotes.forEach { item ->
+                val map = item as? Map<*, *>
+                val json = JSONObject()
+                json.put("reference", map?.get("reference") as? String ?: "")
+                json.put("title", map?.get("title") as? String ?: "")
+                json.put("quote", map?.get("quote") as? String ?: "")
+                json.put("meaning", map?.get("meaning") as? String ?: "")
+                array.put(json)
+            }
+            editor.putString("quotesJson", array.toString())
+        }
+        val mukhpathItems = payload["mukhpathItems"] as? List<*>
+        if (mukhpathItems != null) {
+            val array = JSONArray()
+            mukhpathItems.forEach { item ->
+                val map = item as? Map<*, *>
+                val json = JSONObject()
+                json.put("id", map?.get("id") as? String ?: "")
+                json.put("question", map?.get("question") as? String ?: "")
+                json.put("answer", map?.get("answer") as? String ?: "")
+                array.put(json)
+            }
+            editor.putString("mukhpathJson", array.toString())
+        }
+        editor.apply()
+    }
+
     private companion object {
         const val WIDGET_CHANNEL = "vachanamrut_app/widget"
+        const val WIDGET_PREFS_NAME = "vachanamrut_widget_preferences"
     }
 }

@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
 import org.json.JSONArray
+import org.json.JSONObject
 
 class VachanamrutWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
@@ -52,7 +53,6 @@ class VachanamrutWidgetProvider : AppWidgetProvider() {
         private const val ACTION_TOGGLE_WIDGET =
             "com.example.vachanamrut_app.ACTION_TOGGLE_WIDGET"
         private const val PREFS_NAME = "vachanamrut_widget_preferences"
-        private const val ROTATION_INTERVAL_MILLIS = 60L * 60L * 1000L
 
         fun refreshAll(context: Context) {
             val appWidgetManager = AppWidgetManager.getInstance(context)
@@ -68,24 +68,17 @@ class VachanamrutWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int,
         ) {
-            val quote = QuoteRepository.load(context).quoteForNow()
-            val showMeaning = context
-                .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getBoolean(meaningKey(appWidgetId), false)
+            val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val widgetState = WidgetState.fromPreferences(preferences)
+            val content = when (widgetState.appMode) {
+                "mukhpath" -> widgetState.mukhpathContentForNow()
+                else -> widgetState.quoteContentForNow()
+            }
 
             val views = RemoteViews(context.packageName, R.layout.vachanamrut_widget)
-            views.setTextViewText(
-                R.id.widget_kicker,
-                if (showMeaning) "English Meaning" else quote.reference,
-            )
-            views.setTextViewText(
-                R.id.widget_body,
-                if (showMeaning) quote.meaning else quote.quote,
-            )
-            views.setTextViewText(
-                R.id.widget_reference,
-                if (showMeaning) "Tap to return to Gujarati" else "Tap to see meaning",
-            )
+            views.setTextViewText(R.id.widget_kicker, content.kicker)
+            views.setTextViewText(R.id.widget_body, content.body)
+            views.setTextViewText(R.id.widget_reference, content.reference)
             views.setOnClickPendingIntent(
                 R.id.widget_root,
                 toggleIntent(context, appWidgetId),
@@ -107,54 +100,126 @@ class VachanamrutWidgetProvider : AppWidgetProvider() {
             )
         }
 
-        private fun List<VachanamrutQuote>.quoteForNow(): VachanamrutQuote {
-            val index = ((System.currentTimeMillis() / ROTATION_INTERVAL_MILLIS) % size).toInt()
-            return this[index]
-        }
-
         private fun meaningKey(appWidgetId: Int) = "show_meaning_$appWidgetId"
+    }
+}
+
+private data class WidgetContent(
+    val kicker: String,
+    val body: String,
+    val reference: String,
+)
+
+private data class WidgetState(
+    val appMode: String,
+    val language: String,
+    val quoteIntervalMinutes: Int,
+    val mukhpathIntervalMinutes: Int,
+    val completedMukhpathIds: Set<String>,
+    val quotes: List<VachanamrutQuote>,
+    val mukhpathItems: List<MukhpathItem>,
+) {
+    fun quoteContentForNow(): WidgetContent {
+        val quote = quotes.quoteForNow(quoteIntervalMinutes)
+        return when (language) {
+            "english" -> WidgetContent(
+                kicker = "English Meaning",
+                body = quote.meaning,
+                reference = "English preview",
+            )
+            "gujaratiWithEnglish" -> WidgetContent(
+                kicker = quote.reference,
+                body = "${quote.quote}\n\n${quote.meaning}",
+                reference = "Gujarati + English",
+            )
+            else -> WidgetContent(
+                kicker = quote.reference,
+                body = quote.quote,
+                reference = "Gujarati quote",
+            )
+        }
+    }
+
+    fun mukhpathContentForNow(): WidgetContent {
+        val visibleItems = mukhpathItems.filterNot { completedMukhpathIds.contains(it.id) }
+        val item = visibleItems.mukhpathForNow(mukhpathIntervalMinutes)
+        return WidgetContent(
+            kicker = "Mukhpath",
+            body = item.question,
+            reference = item.answer,
+        )
+    }
+
+    companion object {
+        fun fromPreferences(preferences: android.content.SharedPreferences): WidgetState {
+            val appMode = preferences.getString("appMode", "vachanamrut") ?: "vachanamrut"
+            val language = preferences.getString("language", "gujarati") ?: "gujarati"
+            val quoteIntervalMinutes = preferences.getInt("quoteIntervalMinutes", 60)
+            val mukhpathIntervalMinutes = preferences.getInt("mukhpathIntervalMinutes", 60)
+            val completedIds = preferences.getStringSet("completedMukhpathIds", emptySet()) ?: emptySet()
+            val quotes = parseQuotes(preferences.getString("quotesJson", null) ?: "[]")
+            val mukhpathItems = parseMukhpath(preferences.getString("mukhpathJson", null) ?: "[]")
+            return WidgetState(
+                appMode = appMode,
+                language = language,
+                quoteIntervalMinutes = quoteIntervalMinutes,
+                mukhpathIntervalMinutes = mukhpathIntervalMinutes,
+                completedMukhpathIds = completedIds,
+                quotes = quotes,
+                mukhpathItems = mukhpathItems,
+            )
+        }
     }
 }
 
 private data class VachanamrutQuote(
     val reference: String,
+    val title: String,
     val quote: String,
     val meaning: String,
 )
 
-private object QuoteRepository {
-    private var cachedQuotes: List<VachanamrutQuote>? = null
+private data class MukhpathItem(
+    val id: String,
+    val question: String,
+    val answer: String,
+)
 
-    fun load(context: Context): List<VachanamrutQuote> {
-        cachedQuotes?.let { return it }
+private fun List<VachanamrutQuote>.quoteForNow(intervalMinutes: Int): VachanamrutQuote {
+    if (isEmpty()) return VachanamrutQuote("Quote 1", "", "", "")
+    val intervalMillis = intervalMinutes.coerceAtLeast(1) * 60L * 1000L
+    val index = ((System.currentTimeMillis() / intervalMillis) % size).toInt()
+    return this[index]
+}
 
-        return try {
-            context.assets.open("flutter_assets/assets/vachanamrut_quotes.json").use { stream ->
-                val json = stream.bufferedReader().readText()
-                parseQuotes(json).also { cachedQuotes = it }
-            }
-        } catch (_: Exception) {
-            fallbackQuotes().also { cachedQuotes = it }
-        }
-    }
+private fun List<MukhpathItem>.mukhpathForNow(intervalMinutes: Int): MukhpathItem {
+    if (isEmpty()) return MukhpathItem("", "No Mukhpath items available.", "")
+    val intervalMillis = intervalMinutes.coerceAtLeast(1) * 60L * 1000L
+    val index = ((System.currentTimeMillis() / intervalMillis) % size).toInt()
+    return this[index]
+}
 
-    private fun parseQuotes(json: String): List<VachanamrutQuote> {
-        val array = JSONArray(json)
-        return List(array.length()) { index ->
-            val item = array.getJSONObject(index)
-            VachanamrutQuote(
-                reference = item.getString("reference"),
-                quote = item.getString("quote"),
-                meaning = item.getString("meaning"),
-            )
-        }
-    }
-
-    private fun fallbackQuotes() = listOf(
+private fun parseQuotes(json: String): List<VachanamrutQuote> {
+    val array = JSONArray(json)
+    return List(array.length()) { index ->
+        val item = array.getJSONObject(index)
         VachanamrutQuote(
-            reference = "Quote 1",
-            quote = "આ દેહ ભગવાનની ભક્તિ માટે મળ્યો છે.",
-            meaning = "This body has been received for devotion to God.",
-        ),
-    )
+            reference = item.optString("reference", ""),
+            title = item.optString("title", ""),
+            quote = item.optString("quote", ""),
+            meaning = item.optString("meaning", ""),
+        )
+    }
+}
+
+private fun parseMukhpath(json: String): List<MukhpathItem> {
+    val array = JSONArray(json)
+    return List(array.length()) { index ->
+        val item = array.getJSONObject(index)
+        MukhpathItem(
+            id = item.optString("id", ""),
+            question = item.optString("question", ""),
+            answer = item.optString("answer", ""),
+        )
+    }
 }

@@ -5,8 +5,7 @@ enum AppMode { vachanamrut, mukhpath }
 enum AppLanguage { english, gujarati, gujaratiWithEnglish }
 
 class AppSettingsService {
-  AppSettingsService({SharedPreferences? preferences})
-    : _preferences = preferences;
+  AppSettingsService({SharedPreferences? preferences}) : _preferences = preferences;
 
   static const _quoteIntervalKey = 'quote_interval_minutes';
   static const _displayLanguageKey = 'display_language';

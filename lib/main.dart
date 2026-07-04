@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 
 import 'models/vachanamrut_quote.dart';
 import 'services/app_settings_service.dart';
+import 'services/mukhpath_repository.dart';
 import 'services/quote_repository.dart';
+import 'services/widget_sync_service.dart';
 import 'widgets/mukhpath_page.dart';
 import 'widgets/quote_card.dart';
 import 'widgets/settings_page.dart';
@@ -65,6 +67,7 @@ class HomeShellPage extends StatefulWidget {
 
 class _HomeShellPageState extends State<HomeShellPage> {
   final AppSettingsService _settingsService = AppSettingsService();
+  final WidgetSyncService _widgetSyncService = WidgetSyncService();
   int _selectedIndex = 0;
 
   @override
@@ -79,6 +82,11 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() {
       _selectedIndex = _settingsService.appMode == AppMode.mukhpath ? 1 : 0;
     });
+    await _widgetSyncService.syncState(
+      settingsService: _settingsService,
+      quotes: await QuoteRepository.load(),
+      mukhpathItems: MukhpathRepository.loadSampleData(),
+    );
   }
 
   Future<void> _onDestinationSelected(int index) async {
@@ -89,6 +97,15 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() {
       _selectedIndex = index;
     });
+    await _syncWidgetState();
+  }
+
+  Future<void> _syncWidgetState() async {
+    await _widgetSyncService.syncState(
+      settingsService: _settingsService,
+      quotes: await QuoteRepository.load(),
+      mukhpathItems: MukhpathRepository.loadSampleData(),
+    );
   }
 
   @override
@@ -97,8 +114,14 @@ class _HomeShellPageState extends State<HomeShellPage> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          VachanamrutHomePage(settingsService: _settingsService),
-          MukhpathPage(settingsService: _settingsService),
+          VachanamrutHomePage(
+            settingsService: _settingsService,
+            onSettingsChanged: _syncWidgetState,
+          ),
+          MukhpathPage(
+            settingsService: _settingsService,
+            onStateChanged: _syncWidgetState,
+          ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -120,9 +143,14 @@ class _HomeShellPageState extends State<HomeShellPage> {
 }
 
 class VachanamrutHomePage extends StatefulWidget {
-  const VachanamrutHomePage({super.key, required this.settingsService});
+  const VachanamrutHomePage({
+    super.key,
+    required this.settingsService,
+    this.onSettingsChanged,
+  });
 
   final AppSettingsService settingsService;
+  final Future<void> Function()? onSettingsChanged;
 
   @override
   State<VachanamrutHomePage> createState() => _VachanamrutHomePageState();
@@ -130,6 +158,7 @@ class VachanamrutHomePage extends StatefulWidget {
 
 class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
   static const _widgetChannel = MethodChannel('vachanamrut_app/widget');
+  late final WidgetSyncService _widgetSyncService = WidgetSyncService();
 
   late final Future<List<VachanamrutQuote>> _quotes = QuoteRepository.load();
   Future<void> _requestWidgetPin() async {
@@ -168,7 +197,7 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
     }
 
     try {
-      await _widgetChannel.invokeMethod<void>('refreshWidgets');
+      await _widgetSyncService.refreshWidgets();
       if (!mounted) return;
       _showMessage('Widgets refreshed.');
     } on PlatformException catch (_) {
@@ -183,10 +212,14 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
   Future<void> _openSettings() async {
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (context) => SettingsPage(settingsService: widget.settingsService),
+        builder: (context) => SettingsPage(
+          settingsService: widget.settingsService,
+          onSettingsChanged: widget.onSettingsChanged,
+        ),
       ),
     );
     if (!mounted) return;
+    await widget.onSettingsChanged?.call();
     setState(() {});
   }
 
@@ -200,17 +233,6 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(content: Text(message)));
-  }
-
-  String _languageLabel(AppLanguage language) {
-    switch (language) {
-      case AppLanguage.english:
-        return 'English';
-      case AppLanguage.gujarati:
-        return 'Gujarati';
-      case AppLanguage.gujaratiWithEnglish:
-        return 'Gujarati with English Translation';
-    }
   }
 
   String _intervalLabel(Duration interval) {

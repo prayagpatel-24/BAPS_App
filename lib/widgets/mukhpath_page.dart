@@ -5,22 +5,27 @@ import '../services/app_settings_service.dart';
 import '../services/mukhpath_repository.dart';
 
 class MukhpathPage extends StatefulWidget {
-  const MukhpathPage({super.key, required this.settingsService});
+  const MukhpathPage({
+    super.key,
+    required this.settingsService,
+    this.onStateChanged,
+  });
 
   final AppSettingsService settingsService;
+  final Future<void> Function()? onStateChanged;
 
   @override
   State<MukhpathPage> createState() => _MukhpathPageState();
 }
 
 class _MukhpathPageState extends State<MukhpathPage> {
-  late final List<MukhpathItem> _items = MukhpathRepository.loadSampleData();
-  late final Set<String> _completedIds = widget.settingsService.completedMukhpathIds;
-  final Map<String, bool> _revealedAnswers = <String, bool>{};
+  late final List<MukhpathItem> items = MukhpathRepository.loadSampleData();
+  late final Set<String> completedIds = widget.settingsService.completedMukhpathIds;
+  final Map<String, bool> revealedAnswers = <String, bool>{};
 
   @override
   Widget build(BuildContext context) {
-    final visibleItems = _items.where((item) => !_completedIds.contains(item.id)).toList();
+    final visibleItems = items.where((item) => !completedIds.contains(item.id)).toList();
     return Scaffold(
       appBar: AppBar(title: const Text('Mukhpath')),
       body: visibleItems.isEmpty
@@ -28,17 +33,18 @@ class _MukhpathPageState extends State<MukhpathPage> {
               onReset: () async {
                 await widget.settingsService.clearCompletedMukhpath();
                 setState(() {
-                  _completedIds.clear();
+                  completedIds.clear();
                 });
+                await widget.onStateChanged?.call();
               },
             )
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: visibleItems.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final item = visibleItems[index];
-                final revealed = _revealedAnswers[item.id] ?? false;
+                final revealed = revealedAnswers[item.id] ?? false;
                 return Card(
                   child: Padding(
                     padding: const EdgeInsets.all(14),
@@ -56,16 +62,17 @@ class _MukhpathPageState extends State<MukhpathPage> {
                               ),
                             ),
                             Checkbox(
-                              value: _completedIds.contains(item.id),
+                              value: completedIds.contains(item.id),
                               onChanged: (value) async {
                                 await widget.settingsService.toggleMukhpathCompletion(item.id);
                                 setState(() {
                                   if (value == true) {
-                                    _completedIds.add(item.id);
+                                    completedIds.add(item.id);
                                   } else {
-                                    _completedIds.remove(item.id);
+                                    completedIds.remove(item.id);
                                   }
                                 });
+                                await widget.onStateChanged?.call();
                               },
                             ),
                           ],
@@ -74,7 +81,7 @@ class _MukhpathPageState extends State<MukhpathPage> {
                         TextButton.icon(
                           onPressed: () {
                             setState(() {
-                              _revealedAnswers[item.id] = !(revealed);
+                              revealedAnswers[item.id] = !revealed;
                             });
                           },
                           icon: Icon(revealed ? Icons.visibility_off_rounded : Icons.visibility_rounded),
