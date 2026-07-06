@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/mukhpath_item.dart';
 import '../services/app_settings_service.dart';
 import '../services/mukhpath_repository.dart';
+import 'settings_page.dart';
 
 class MukhpathPage extends StatefulWidget {
   const MukhpathPage({
@@ -23,11 +24,33 @@ class _MukhpathPageState extends State<MukhpathPage> {
   late final Set<String> completedIds = widget.settingsService.completedMukhpathIds;
   final Map<String, bool> revealedAnswers = <String, bool>{};
 
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => SettingsPage(
+          settingsService: widget.settingsService,
+          onSettingsChanged: widget.onStateChanged,
+        ),
+      ),
+    );
+    if (!mounted) return;
+    await widget.onStateChanged?.call();
+  }
+
   @override
   Widget build(BuildContext context) {
     final visibleItems = items.where((item) => !completedIds.contains(item.id)).toList();
     return Scaffold(
-      appBar: AppBar(title: const Text('Mukhpath')),
+      appBar: AppBar(
+        title: const Text('Mukhpath'),
+        actions: [
+          IconButton(
+            onPressed: _openSettings,
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings_rounded),
+          ),
+        ],
+      ),
       body: visibleItems.isEmpty
           ? _EmptyState(
               onReset: () async {

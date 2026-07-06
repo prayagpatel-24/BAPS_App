@@ -10,7 +10,7 @@ class SettingsPage extends StatefulWidget {
   });
 
   final AppSettingsService settingsService;
-  final VoidCallback? onSettingsChanged;
+  final Future<void> Function()? onSettingsChanged;
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -20,6 +20,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late Duration _quoteInterval;
   late Duration _mukhpathInterval;
   late AppLanguage _language;
+  late AppMode _appMode;
   late WidgetContentMode _widgetContentMode;
 
   final _quoteOptions = <Duration>[
@@ -51,6 +52,7 @@ class _SettingsPageState extends State<SettingsPage> {
     _quoteInterval = widget.settingsService.quoteInterval;
     _mukhpathInterval = widget.settingsService.mukhpathInterval;
     _language = widget.settingsService.displayLanguage;
+    _appMode = widget.settingsService.appMode;
     _widgetContentMode = widget.settingsService.widgetContentMode;
   }
 
@@ -61,6 +63,24 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _SettingsSection(
+            title: 'App mode',
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(_appMode == AppMode.mukhpath
+                  ? 'Mukhpath mode'
+                  : 'Regular Vachanamrut mode'),
+              subtitle: const Text('Choose which section appears when the app opens'),
+              value: _appMode == AppMode.mukhpath,
+              onChanged: (value) async {
+                final mode = value ? AppMode.mukhpath : AppMode.vachanamrut;
+                setState(() => _appMode = mode);
+                await widget.settingsService.setAppMode(mode);
+                await widget.onSettingsChanged?.call();
+              },
+            ),
+          ),
+          const SizedBox(height: 12),
           _SettingsSection(
             title: 'Vachanamrut quote timing',
             child: DropdownButtonFormField<Duration>(
@@ -77,7 +97,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _quoteInterval = value);
                 await widget.settingsService.setQuoteInterval(value);
-                widget.onSettingsChanged?.call();
+                await widget.onSettingsChanged?.call();
               },
             ),
           ),
@@ -98,7 +118,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _mukhpathInterval = value);
                 await widget.settingsService.setMukhpathInterval(value);
-                widget.onSettingsChanged?.call();
+                await widget.onSettingsChanged?.call();
               },
             ),
           ),
@@ -119,7 +139,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _language = value);
                 await widget.settingsService.setDisplayLanguage(value);
-                widget.onSettingsChanged?.call();
+                await widget.onSettingsChanged?.call();
               },
             ),
           ),
@@ -140,7 +160,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _widgetContentMode = value);
                 await widget.settingsService.setWidgetContentMode(value);
-                widget.onSettingsChanged?.call();
+                await widget.onSettingsChanged?.call();
               },
             ),
           ),

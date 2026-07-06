@@ -68,7 +68,7 @@ class HomeShellPage extends StatefulWidget {
 class _HomeShellPageState extends State<HomeShellPage> {
   final AppSettingsService _settingsService = AppSettingsService();
   final WidgetSyncService _widgetSyncService = WidgetSyncService();
-  int _selectedIndex = 0;
+  AppMode _appMode = AppMode.vachanamrut;
 
   @override
   void initState() {
@@ -80,22 +80,15 @@ class _HomeShellPageState extends State<HomeShellPage> {
     await _settingsService.initialize();
     if (!mounted) return;
     setState(() {
-      _selectedIndex = _settingsService.appMode == AppMode.mukhpath ? 1 : 0;
+      _appMode = _settingsService.appMode;
     });
-    await _widgetSyncService.syncState(
-      settingsService: _settingsService,
-      quotes: await QuoteRepository.load(),
-      mukhpathItems: MukhpathRepository.loadSampleData(),
-    );
+    await _syncWidgetState();
   }
 
-  Future<void> _onDestinationSelected(int index) async {
-    await _settingsService.setAppMode(
-      index == 1 ? AppMode.mukhpath : AppMode.vachanamrut,
-    );
+  Future<void> _onSettingsChanged() async {
     if (!mounted) return;
     setState(() {
-      _selectedIndex = index;
+      _appMode = _settingsService.appMode;
     });
     await _syncWidgetState();
   }
@@ -110,35 +103,15 @@ class _HomeShellPageState extends State<HomeShellPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          VachanamrutHomePage(
+    return _appMode == AppMode.mukhpath
+        ? MukhpathPage(
             settingsService: _settingsService,
-            onSettingsChanged: _syncWidgetState,
-          ),
-          MukhpathPage(
+            onStateChanged: _onSettingsChanged,
+          )
+        : VachanamrutHomePage(
             settingsService: _settingsService,
-            onStateChanged: _syncWidgetState,
-          ),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onDestinationSelected,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.auto_stories_rounded),
-            label: 'Vachanamrut',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.quiz_rounded),
-            label: 'Mukhpath',
-          ),
-        ],
-      ),
-    );
+            onSettingsChanged: _onSettingsChanged,
+          );
   }
 }
 
