@@ -22,4 +22,25 @@ void main() {
     expect(reloaded.quoteInterval, Duration(hours: 3));
     expect(reloaded.displayLanguage, AppLanguage.gujaratiWithEnglish);
   });
+
+  test('toggles app and widget modes together', () async {
+    final service = AppSettingsService();
+    await service.initialize();
+
+    await service.setModeToggle(true);
+
+    final mukhpathReloaded = AppSettingsService();
+    await mukhpathReloaded.initialize();
+
+    expect(mukhpathReloaded.appMode, AppMode.mukhpath);
+    expect(mukhpathReloaded.widgetContentMode, WidgetContentMode.mukhpath);
+
+    await mukhpathReloaded.setModeToggle(false);
+
+    final regularReloaded = AppSettingsService();
+    await regularReloaded.initialize();
+
+    expect(regularReloaded.appMode, AppMode.vachanamrut);
+    expect(regularReloaded.widgetContentMode, WidgetContentMode.vachanamrut);
+  });
 }

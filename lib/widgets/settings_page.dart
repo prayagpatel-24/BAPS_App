@@ -24,6 +24,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late WidgetContentMode _widgetContentMode;
 
   final _quoteOptions = <Duration>[
+    const Duration(seconds: 10),
     const Duration(minutes: 15),
     const Duration(minutes: 30),
     const Duration(minutes: 45),
@@ -64,18 +65,17 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.all(16),
         children: [
           _SettingsSection(
-            title: 'App mode',
+            title: 'Mode toggle',
             child: SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: Text(_appMode == AppMode.mukhpath
                   ? 'Mukhpath mode'
                   : 'Regular Vachanamrut mode'),
-              subtitle: const Text('Choose which section appears when the app opens'),
+              subtitle: const Text('Toggle the app and widget between regular and mukhpath content'),
               value: _appMode == AppMode.mukhpath,
               onChanged: (value) async {
-                final mode = value ? AppMode.mukhpath : AppMode.vachanamrut;
-                setState(() => _appMode = mode);
-                await widget.settingsService.setAppMode(mode);
+                setState(() => _appMode = value ? AppMode.mukhpath : AppMode.vachanamrut);
+                await widget.settingsService.setModeToggle(value);
                 await widget.onSettingsChanged?.call();
               },
             ),
@@ -170,6 +170,9 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   String _formatDuration(Duration duration) {
+    if (duration.inSeconds < 60) {
+      return '${duration.inSeconds} seconds';
+    }
     if (duration.inMinutes % 60 == 0 && duration.inMinutes >= 60) {
       final hours = duration.inHours;
       return hours == 1 ? '1 hour' : '$hours hours';

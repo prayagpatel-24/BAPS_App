@@ -209,6 +209,9 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
   }
 
   String _intervalLabel(Duration interval) {
+    if (interval.inSeconds < 60) {
+      return '${interval.inSeconds} seconds';
+    }
     if (interval.inMinutes % 60 == 0 && interval.inMinutes >= 60) {
       final hours = interval.inHours;
       return hours == 1 ? '1 hour' : '$hours hours';

@@ -88,6 +88,14 @@ class AppSettingsService {
     await _preferences!.setString(_widgetContentModeKey, mode.name);
   }
 
+  Future<void> setModeToggle(bool enabled) async {
+    await initialize();
+    final appMode = enabled ? AppMode.mukhpath : AppMode.vachanamrut;
+    final widgetMode = enabled ? WidgetContentMode.mukhpath : WidgetContentMode.vachanamrut;
+    await _preferences!.setString(_appModeKey, appMode.name);
+    await _preferences!.setString(_widgetContentModeKey, widgetMode.name);
+  }
+
   Future<void> toggleMukhpathCompletion(String id) async {
     await initialize();
     final completed = completedMukhpathIds.toSet();

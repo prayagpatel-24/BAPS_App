@@ -3,6 +3,7 @@ package com.example.vachanamrut_app
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Build
 import io.flutter.embedding.engine.FlutterEngine
@@ -64,7 +65,7 @@ class MainActivity : FlutterActivity() {
         editor.putInt("mukhpathIntervalMinutes", (payload["mukhpathIntervalMinutes"] as? Number)?.toInt() ?: 60)
         editor.putString("language", payload["language"] as? String ?: "gujarati")
         val completedIds = payload["completedMukhpathIds"] as? List<*>
-        editor.putStringSet("completedMukhpathIds", completedIds?.filterIsInstance<String>()?.toSet() ?: emptySet())
+        editor.putStringSet("completedMukhpathIds", completedIds?.filterIsInstance<String>()?.toSet() ?: emptySet<String>())
         val quotes = payload["quotes"] as? List<*>
         if (quotes != null) {
             val array = JSONArray()
