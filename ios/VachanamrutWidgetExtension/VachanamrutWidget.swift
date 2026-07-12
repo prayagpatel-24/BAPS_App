@@ -146,7 +146,7 @@ private struct WidgetState {
   }
 
   static func toggleMeaning() {
-    showMeaning.toggle()
+    Self.showMeaning.toggle()
   }
 
   static func load() -> WidgetState {
@@ -154,8 +154,8 @@ private struct WidgetState {
       appMode: defaults.string(forKey: "appMode") ?? "vachanamrut",
       widgetContentMode: defaults.string(forKey: "widgetContentMode") ?? "vachanamrut",
       language: defaults.string(forKey: "language") ?? "gujarati",
-      quoteIntervalMinutes: max(defaults.integer(forKey: "quoteIntervalMinutes"), 1),
-      mukhpathIntervalMinutes: max(defaults.integer(forKey: "mukhpathIntervalMinutes"), 1),
+      quoteIntervalMinutes: Swift.max(defaults.integer(forKey: "quoteIntervalMinutes"), 1),
+      mukhpathIntervalMinutes: Swift.max(defaults.integer(forKey: "mukhpathIntervalMinutes"), 1),
       completedMukhpathIds: Set(defaults.stringArray(forKey: "completedMukhpathIds") ?? []),
       quotes: loadQuotes(),
       mukhpathItems: loadMukhpathItems()
@@ -173,7 +173,7 @@ private struct WidgetState {
     let intervalMinutes = widgetContentMode == "mukhpath"
       ? mukhpathIntervalMinutes
       : quoteIntervalMinutes
-    let intervalSeconds = TimeInterval(max(intervalMinutes, 1) * 60)
+    let intervalSeconds = TimeInterval(Swift.max(intervalMinutes, 1) * 60)
     let nextBoundary = (floor(date.timeIntervalSince1970 / intervalSeconds) + 1) * intervalSeconds
     return Date(timeIntervalSince1970: nextBoundary)
   }
@@ -198,9 +198,9 @@ private struct WidgetState {
       )
     default:
       return WidgetContent(
-        kicker: showMeaning ? "English Meaning" : quote.reference,
-        body: showMeaning ? quote.meaning : quote.quote,
-        footer: showMeaning ? "Tap to return to Gujarati" : "Tap to see meaning",
+        kicker: Self.showMeaning ? "English Meaning" : quote.reference,
+        body: Self.showMeaning ? quote.meaning : quote.quote,
+        footer: Self.showMeaning ? "Tap to return to Gujarati" : "Tap to see meaning",
         canToggleMeaning: true
       )
     }
@@ -281,7 +281,7 @@ private extension Array where Element == VachanamrutQuote {
       return nil
     }
 
-    let intervalSeconds = TimeInterval(max(intervalMinutes, 1) * 60)
+    let intervalSeconds = TimeInterval(Swift.max(intervalMinutes, 1) * 60)
     let index = Int(date.timeIntervalSince1970 / intervalSeconds) % count
     return self[index]
   }
@@ -293,7 +293,7 @@ private extension Array where Element == MukhpathItem {
       return nil
     }
 
-    let intervalSeconds = TimeInterval(max(intervalMinutes, 1) * 60)
+    let intervalSeconds = TimeInterval(Swift.max(intervalMinutes, 1) * 60)
     let index = Int(date.timeIntervalSince1970 / intervalSeconds) % count
     return self[index]
   }
