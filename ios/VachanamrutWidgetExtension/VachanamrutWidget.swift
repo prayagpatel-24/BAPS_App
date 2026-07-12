@@ -191,10 +191,10 @@ private struct WidgetState {
       )
     case "gujaratiWithEnglish":
       return WidgetContent(
-        kicker: quote.reference,
-        body: "\(quote.quote)\n\n\(quote.meaning)",
-        footer: "Gujarati + English",
-        canToggleMeaning: false
+        kicker: Self.showMeaning ? "English Meaning" : quote.reference,
+        body: Self.showMeaning ? quote.meaning : quote.quote,
+        footer: Self.showMeaning ? "Tap to return to Gujarati" : "Tap to see meaning",
+        canToggleMeaning: true
       )
     default:
       return WidgetContent(

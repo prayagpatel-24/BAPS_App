@@ -70,9 +70,10 @@ class VachanamrutWidgetProvider : AppWidgetProvider() {
         ) {
             val preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             val widgetState = WidgetState.fromPreferences(preferences)
+            val showMeaning = preferences.getBoolean(meaningKey(appWidgetId), false)
             val content = when (widgetState.widgetContentMode) {
                 "mukhpath" -> widgetState.mukhpathContentForNow()
-                else -> widgetState.quoteContentForNow()
+                else -> widgetState.quoteContentForNow(showMeaning)
             }
 
             val views = RemoteViews(context.packageName, R.layout.vachanamrut_widget)
@@ -120,7 +121,7 @@ private data class WidgetState(
     val quotes: List<VachanamrutQuote>,
     val mukhpathItems: List<MukhpathItem>,
 ) {
-    fun quoteContentForNow(): WidgetContent {
+    fun quoteContentForNow(showMeaning: Boolean): WidgetContent {
         val quote = quotes.quoteForNow(quoteIntervalMinutes)
         return when (language) {
             "english" -> WidgetContent(
@@ -129,14 +130,14 @@ private data class WidgetState(
                 reference = "English preview",
             )
             "gujaratiWithEnglish" -> WidgetContent(
-                kicker = quote.reference,
-                body = "${quote.quote}\n\n${quote.meaning}",
-                reference = "Gujarati + English",
+                kicker = if (showMeaning) "English Meaning" else quote.reference,
+                body = if (showMeaning) quote.meaning else quote.quote,
+                reference = if (showMeaning) "Tap to return to Gujarati" else "Tap to see meaning",
             )
             else -> WidgetContent(
-                kicker = quote.reference,
-                body = quote.quote,
-                reference = "Gujarati quote",
+                kicker = if (showMeaning) "English Meaning" else quote.reference,
+                body = if (showMeaning) quote.meaning else quote.quote,
+                reference = if (showMeaning) "Tap to return to Gujarati" else "Tap to see meaning",
             )
         }
     }

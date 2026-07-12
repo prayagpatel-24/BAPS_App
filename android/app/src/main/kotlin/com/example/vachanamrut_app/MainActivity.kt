@@ -59,11 +59,18 @@ class MainActivity : FlutterActivity() {
     private fun persistWidgetState(context: Context, payload: Map<*, *>) {
         val preferences = context.getSharedPreferences(WIDGET_PREFS_NAME, Context.MODE_PRIVATE)
         val editor = preferences.edit()
+        val language = payload["language"] as? String ?: "gujarati"
+        val previousLanguage = preferences.getString("language", null)
         editor.putString("appMode", payload["appMode"] as? String ?: "vachanamrut")
         editor.putString("widgetContentMode", payload["widgetContentMode"] as? String ?: "vachanamrut")
         editor.putInt("quoteIntervalMinutes", (payload["quoteIntervalMinutes"] as? Number)?.toInt() ?: 60)
         editor.putInt("mukhpathIntervalMinutes", (payload["mukhpathIntervalMinutes"] as? Number)?.toInt() ?: 60)
-        editor.putString("language", payload["language"] as? String ?: "gujarati")
+        editor.putString("language", language)
+        if (previousLanguage != null && previousLanguage != language) {
+            preferences.all.keys
+                .filter { it.startsWith("show_meaning_") }
+                .forEach { editor.remove(it) }
+        }
         val completedIds = payload["completedMukhpathIds"] as? List<*>
         editor.putStringSet("completedMukhpathIds", completedIds?.filterIsInstance<String>()?.toSet() ?: emptySet<String>())
         val quotes = payload["quotes"] as? List<*>

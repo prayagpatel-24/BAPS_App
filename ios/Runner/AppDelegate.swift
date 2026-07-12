@@ -69,12 +69,17 @@ private final class VachanamrutWidgetBridge: NSObject, FlutterPlugin {
 
   private func persistWidgetState(_ payload: [String: Any]) {
     let defaults = UserDefaults(suiteName: Self.appGroupIdentifier) ?? .standard
+    let language = stringValue(payload["language"], fallback: "gujarati")
+    let previousLanguage = defaults.string(forKey: "language")
     defaults.set(stringValue(payload["appMode"], fallback: "vachanamrut"), forKey: "appMode")
     defaults.set(stringValue(payload["widgetContentMode"], fallback: "vachanamrut"), forKey: "widgetContentMode")
     defaults.set(intValue(payload["quoteIntervalMinutes"], fallback: 60), forKey: "quoteIntervalMinutes")
     defaults.set(intValue(payload["mukhpathIntervalMinutes"], fallback: 60), forKey: "mukhpathIntervalMinutes")
-    defaults.set(stringValue(payload["language"], fallback: "gujarati"), forKey: "language")
+    defaults.set(language, forKey: "language")
     defaults.set(stringArray(payload["completedMukhpathIds"]), forKey: "completedMukhpathIds")
+    if let previousLanguage = previousLanguage, previousLanguage != language {
+      defaults.set(false, forKey: "showMeaning")
+    }
 
     if let quotesJson = jsonString(from: payload["quotes"]) {
       defaults.set(quotesJson, forKey: "quotesJson")

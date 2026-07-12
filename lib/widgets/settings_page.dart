@@ -26,7 +26,7 @@ class _SettingsPageState extends State<SettingsPage> {
   Timer? _settingsChangeTimer;
 
   final _quoteOptions = <Duration>[
-    const Duration(seconds: 10),
+    const Duration(minutes: 1),
     const Duration(minutes: 15),
     const Duration(minutes: 30),
     const Duration(minutes: 45),
@@ -102,48 +102,52 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           const SizedBox(height: 12),
-          _SettingsSection(
-            title: 'Vachanamrut quote timing',
-            child: DropdownButtonFormField<Duration>(
-              initialValue: _quoteInterval,
-              items: _quoteOptions
-                  .map(
-                    (option) => DropdownMenuItem(
-                      value: option,
-                      child: Text(_formatDuration(option)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) async {
-                if (value == null) return;
-                setState(() => _quoteInterval = value);
-                await widget.settingsService.setQuoteInterval(value);
-                _scheduleSettingsChanged();
-              },
+          if (_appMode == AppMode.vachanamrut) ...[
+            _SettingsSection(
+              title: 'Vachanamrut quote timing',
+              child: DropdownButtonFormField<Duration>(
+                initialValue: _quoteInterval,
+                items: _quoteOptions
+                    .map(
+                      (option) => DropdownMenuItem(
+                        value: option,
+                        child: Text(_formatDuration(option)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) async {
+                  if (value == null) return;
+                  setState(() => _quoteInterval = value);
+                  await widget.settingsService.setQuoteInterval(value);
+                  _scheduleSettingsChanged();
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          _SettingsSection(
-            title: 'Mukhpath timing',
-            child: DropdownButtonFormField<Duration>(
-              initialValue: _mukhpathInterval,
-              items: _mukhpathOptions
-                  .map(
-                    (option) => DropdownMenuItem(
-                      value: option,
-                      child: Text(_formatDuration(option)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) async {
-                if (value == null) return;
-                setState(() => _mukhpathInterval = value);
-                await widget.settingsService.setMukhpathInterval(value);
-                _scheduleSettingsChanged();
-              },
+            const SizedBox(height: 12),
+          ],
+          if (_appMode == AppMode.mukhpath) ...[
+            _SettingsSection(
+              title: 'Mukhpath timing',
+              child: DropdownButtonFormField<Duration>(
+                initialValue: _mukhpathInterval,
+                items: _mukhpathOptions
+                    .map(
+                      (option) => DropdownMenuItem(
+                        value: option,
+                        child: Text(_formatDuration(option)),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) async {
+                  if (value == null) return;
+                  setState(() => _mukhpathInterval = value);
+                  await widget.settingsService.setMukhpathInterval(value);
+                  _scheduleSettingsChanged();
+                },
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
+          ],
           _SettingsSection(
             title: 'Display language',
             child: DropdownButtonFormField<AppLanguage>(
@@ -196,7 +200,8 @@ class _SettingsPageState extends State<SettingsPage> {
       final hours = duration.inHours;
       return hours == 1 ? '1 hour' : '$hours hours';
     }
-    return '${duration.inMinutes} minutes';
+    final minutes = duration.inMinutes;
+    return minutes == 1 ? '1 minute' : '$minutes minutes';
   }
 
   String _languageLabel(AppLanguage language) {
