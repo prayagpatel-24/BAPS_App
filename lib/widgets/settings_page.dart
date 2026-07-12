@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/app_settings_service.dart';
@@ -21,7 +23,7 @@ class _SettingsPageState extends State<SettingsPage> {
   late Duration _mukhpathInterval;
   late AppLanguage _language;
   late AppMode _appMode;
-  late WidgetContentMode _widgetContentMode;
+  Timer? _settingsChangeTimer;
 
   final _quoteOptions = <Duration>[
     const Duration(seconds: 10),
@@ -50,11 +52,30 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
-    _quoteInterval = widget.settingsService.quoteInterval;
-    _mukhpathInterval = widget.settingsService.mukhpathInterval;
+    _quoteInterval = _resolveDurationOption(
+      widget.settingsService.quoteInterval,
+      _quoteOptions,
+    );
+    _mukhpathInterval = _resolveDurationOption(
+      widget.settingsService.mukhpathInterval,
+      _mukhpathOptions,
+    );
     _language = widget.settingsService.displayLanguage;
     _appMode = widget.settingsService.appMode;
-    _widgetContentMode = widget.settingsService.widgetContentMode;
+  }
+
+  @override
+  void dispose() {
+    _settingsChangeTimer?.cancel();
+    super.dispose();
+  }
+
+  void _scheduleSettingsChanged() {
+    _settingsChangeTimer?.cancel();
+    _settingsChangeTimer = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) return;
+      unawaited(widget.onSettingsChanged?.call());
+    });
   }
 
   @override
@@ -76,7 +97,7 @@ class _SettingsPageState extends State<SettingsPage> {
               onChanged: (value) async {
                 setState(() => _appMode = value ? AppMode.mukhpath : AppMode.vachanamrut);
                 await widget.settingsService.setModeToggle(value);
-                await widget.onSettingsChanged?.call();
+                _scheduleSettingsChanged();
               },
             ),
           ),
@@ -97,7 +118,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _quoteInterval = value);
                 await widget.settingsService.setQuoteInterval(value);
-                await widget.onSettingsChanged?.call();
+                _scheduleSettingsChanged();
               },
             ),
           ),
@@ -118,7 +139,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _mukhpathInterval = value);
                 await widget.settingsService.setMukhpathInterval(value);
-                await widget.onSettingsChanged?.call();
+                _scheduleSettingsChanged();
               },
             ),
           ),
@@ -139,34 +160,32 @@ class _SettingsPageState extends State<SettingsPage> {
                 if (value == null) return;
                 setState(() => _language = value);
                 await widget.settingsService.setDisplayLanguage(value);
-                await widget.onSettingsChanged?.call();
-              },
-            ),
-          ),
-          const SizedBox(height: 12),
-          _SettingsSection(
-            title: 'Widget content mode',
-            child: DropdownButtonFormField<WidgetContentMode>(
-              initialValue: _widgetContentMode,
-              items: WidgetContentMode.values
-                  .map(
-                    (mode) => DropdownMenuItem(
-                      value: mode,
-                      child: Text(_widgetModeLabel(mode)),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) async {
-                if (value == null) return;
-                setState(() => _widgetContentMode = value);
-                await widget.settingsService.setWidgetContentMode(value);
-                await widget.onSettingsChanged?.call();
+                _scheduleSettingsChanged();
               },
             ),
           ),
         ],
       ),
     );
+  }
+
+  Duration _resolveDurationOption(Duration value, List<Duration> options) {
+    if (options.contains(value)) {
+      return value;
+    }
+
+    Duration? closest;
+    var closestDelta = 0;
+
+    for (final option in options) {
+      final delta = (option.inMilliseconds - value.inMilliseconds).abs();
+      if (closest == null || delta < closestDelta) {
+        closest = option;
+        closestDelta = delta;
+      }
+    }
+
+    return closest ?? options.first;
   }
 
   String _formatDuration(Duration duration) {
@@ -191,14 +210,6 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  String _widgetModeLabel(WidgetContentMode mode) {
-    switch (mode) {
-      case WidgetContentMode.vachanamrut:
-        return 'Regular Vachanamrut';
-      case WidgetContentMode.mukhpath:
-        return 'Mukhpath';
-    }
-  }
 }
 
 class _SettingsSection extends StatelessWidget {

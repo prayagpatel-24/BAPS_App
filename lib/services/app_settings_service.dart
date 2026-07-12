@@ -24,12 +24,12 @@ class AppSettingsService {
 
   Duration get quoteInterval {
     final minutes = _preferences?.getInt(_quoteIntervalKey) ?? 60;
-    return Duration(minutes: minutes);
+    return Duration(minutes: minutes > 0 ? minutes : 1);
   }
 
   Duration get mukhpathInterval {
     final minutes = _preferences?.getInt(_mukhpathIntervalKey) ?? 60;
-    return Duration(minutes: minutes);
+    return Duration(minutes: minutes > 0 ? minutes : 1);
   }
 
   AppLanguage get displayLanguage {
@@ -65,26 +65,46 @@ class AppSettingsService {
 
   Future<void> setQuoteInterval(Duration interval) async {
     await initialize();
+    final currentMinutes = _preferences!.getInt(_quoteIntervalKey);
+    if (currentMinutes == interval.inMinutes) {
+      return;
+    }
     await _preferences!.setInt(_quoteIntervalKey, interval.inMinutes);
   }
 
   Future<void> setMukhpathInterval(Duration interval) async {
     await initialize();
+    final currentMinutes = _preferences!.getInt(_mukhpathIntervalKey);
+    if (currentMinutes == interval.inMinutes) {
+      return;
+    }
     await _preferences!.setInt(_mukhpathIntervalKey, interval.inMinutes);
   }
 
   Future<void> setDisplayLanguage(AppLanguage language) async {
     await initialize();
+    final currentValue = _preferences!.getString(_displayLanguageKey);
+    if (currentValue == language.name) {
+      return;
+    }
     await _preferences!.setString(_displayLanguageKey, language.name);
   }
 
   Future<void> setAppMode(AppMode mode) async {
     await initialize();
+    final currentValue = _preferences!.getString(_appModeKey);
+    if (currentValue == mode.name) {
+      return;
+    }
     await _preferences!.setString(_appModeKey, mode.name);
   }
 
   Future<void> setWidgetContentMode(WidgetContentMode mode) async {
     await initialize();
+    final currentValue = _preferences!.getString(_widgetContentModeKey);
+    if (currentValue == mode.name) {
+      return;
+    }
     await _preferences!.setString(_widgetContentModeKey, mode.name);
   }
 
@@ -92,6 +112,11 @@ class AppSettingsService {
     await initialize();
     final appMode = enabled ? AppMode.mukhpath : AppMode.vachanamrut;
     final widgetMode = enabled ? WidgetContentMode.mukhpath : WidgetContentMode.vachanamrut;
+    final currentAppMode = _preferences!.getString(_appModeKey);
+    final currentWidgetMode = _preferences!.getString(_widgetContentModeKey);
+    if (currentAppMode == appMode.name && currentWidgetMode == widgetMode.name) {
+      return;
+    }
     await _preferences!.setString(_appModeKey, appMode.name);
     await _preferences!.setString(_widgetContentModeKey, widgetMode.name);
   }
@@ -104,7 +129,8 @@ class AppSettingsService {
     } else {
       completed.add(id);
     }
-    await _preferences!.setStringList(_completedMukhpathKey, completed.toList());
+    final updatedList = completed.toList()..sort();
+    await _preferences!.setStringList(_completedMukhpathKey, updatedList);
   }
 
   Future<void> clearCompletedMukhpath() async {

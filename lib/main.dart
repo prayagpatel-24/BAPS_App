@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'models/mukhpath_item.dart';
 import 'models/vachanamrut_quote.dart';
 import 'services/app_settings_service.dart';
 import 'services/mukhpath_repository.dart';
@@ -69,6 +72,9 @@ class _HomeShellPageState extends State<HomeShellPage> {
   final AppSettingsService _settingsService = AppSettingsService();
   final WidgetSyncService _widgetSyncService = WidgetSyncService();
   AppMode _appMode = AppMode.vachanamrut;
+  List<VachanamrutQuote> _cachedQuotes = const <VachanamrutQuote>[];
+  List<MukhpathItem> _cachedMukhpathItems = const <MukhpathItem>[];
+  Timer? _widgetSyncTimer;
 
   @override
   void initState() {
@@ -76,8 +82,15 @@ class _HomeShellPageState extends State<HomeShellPage> {
     _bootstrap();
   }
 
+  @override
+  void dispose() {
+    _widgetSyncTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _bootstrap() async {
     await _settingsService.initialize();
+    await _loadCachedContent();
     if (!mounted) return;
     setState(() {
       _appMode = _settingsService.appMode;
@@ -90,14 +103,32 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() {
       _appMode = _settingsService.appMode;
     });
-    await _syncWidgetState();
+    _scheduleWidgetSync();
+  }
+
+  Future<void> _loadCachedContent() async {
+    if (_cachedQuotes.isEmpty) {
+      _cachedQuotes = await QuoteRepository.load();
+    }
+    if (_cachedMukhpathItems.isEmpty) {
+      _cachedMukhpathItems = MukhpathRepository.loadSampleData();
+    }
+  }
+
+  void _scheduleWidgetSync() {
+    _widgetSyncTimer?.cancel();
+    _widgetSyncTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      unawaited(_syncWidgetState());
+    });
   }
 
   Future<void> _syncWidgetState() async {
+    await _loadCachedContent();
     await _widgetSyncService.syncState(
       settingsService: _settingsService,
-      quotes: await QuoteRepository.load(),
-      mukhpathItems: MukhpathRepository.loadSampleData(),
+      quotes: _cachedQuotes,
+      mukhpathItems: _cachedMukhpathItems,
     );
   }
 
@@ -193,7 +224,6 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
     );
     if (!mounted) return;
     await widget.onSettingsChanged?.call();
-    setState(() {});
   }
 
   String _manualWidgetInstallMessage() {
@@ -209,14 +239,15 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
   }
 
   String _intervalLabel(Duration interval) {
-    if (interval.inSeconds < 60) {
-      return '${interval.inSeconds} seconds';
+    final safeInterval = interval.inMilliseconds > 0 ? interval : const Duration(minutes: 1);
+    if (safeInterval.inSeconds < 60) {
+      return '${safeInterval.inSeconds} seconds';
     }
-    if (interval.inMinutes % 60 == 0 && interval.inMinutes >= 60) {
-      final hours = interval.inHours;
+    if (safeInterval.inMinutes % 60 == 0 && safeInterval.inMinutes >= 60) {
+      final hours = safeInterval.inHours;
       return hours == 1 ? '1 hour' : '$hours hours';
     }
-    return '${interval.inMinutes} minutes';
+    return '${safeInterval.inMinutes} minutes';
   }
 
   @override
@@ -302,7 +333,8 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
 
   VachanamrutQuote _quoteForDate(DateTime date, List<VachanamrutQuote> quotes) {
     final interval = widget.settingsService.quoteInterval;
-    final intervalIndex = date.millisecondsSinceEpoch ~/ interval.inMilliseconds;
+    final safeIntervalMilliseconds = interval.inMilliseconds > 0 ? interval.inMilliseconds : 60000;
+    final intervalIndex = date.millisecondsSinceEpoch ~/ safeIntervalMilliseconds;
     return quotes[intervalIndex % quotes.length];
   }
 }
