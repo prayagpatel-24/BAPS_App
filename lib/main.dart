@@ -74,18 +74,11 @@ class _HomeShellPageState extends State<HomeShellPage> {
   AppMode _appMode = AppMode.vachanamrut;
   List<VachanamrutQuote> _cachedQuotes = const <VachanamrutQuote>[];
   List<MukhpathItem> _cachedMukhpathItems = const <MukhpathItem>[];
-  Timer? _widgetSyncTimer;
 
   @override
   void initState() {
     super.initState();
     _bootstrap();
-  }
-
-  @override
-  void dispose() {
-    _widgetSyncTimer?.cancel();
-    super.dispose();
   }
 
   Future<void> _bootstrap() async {
@@ -103,7 +96,7 @@ class _HomeShellPageState extends State<HomeShellPage> {
     setState(() {
       _appMode = _settingsService.appMode;
     });
-    _scheduleWidgetSync();
+    await _syncWidgetState();
   }
 
   Future<void> _loadCachedContent() async {
@@ -113,14 +106,6 @@ class _HomeShellPageState extends State<HomeShellPage> {
     if (_cachedMukhpathItems.isEmpty) {
       _cachedMukhpathItems = MukhpathRepository.loadSampleData();
     }
-  }
-
-  void _scheduleWidgetSync() {
-    _widgetSyncTimer?.cancel();
-    _widgetSyncTimer = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      unawaited(_syncWidgetState());
-    });
   }
 
   Future<void> _syncWidgetState() async {
@@ -174,17 +159,17 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
     }
 
     try {
-      final pinned = await _widgetChannel.invokeMethod<bool>('requestPinWidget');
-      if (!mounted) return;
-      _showMessage(
-        switch (defaultTargetPlatform) {
-          TargetPlatform.android when pinned == true =>
-            'Choose where to place the Vachanamrut widget.',
-          TargetPlatform.android =>
-            'Long-press your home screen and add the Vachanamrut widget.',
-          _ => 'Long-press your home screen and add the Vachanamrut widget.',
-        },
+      final pinned = await _widgetChannel.invokeMethod<bool>(
+        'requestPinWidget',
       );
+      if (!mounted) return;
+      _showMessage(switch (defaultTargetPlatform) {
+        TargetPlatform.android when pinned == true =>
+          'Choose where to place the Vachanamrut widget.',
+        TargetPlatform.android =>
+          'Long-press your home screen and add the Vachanamrut widget.',
+        _ => 'Long-press your home screen and add the Vachanamrut widget.',
+      });
     } on PlatformException catch (_) {
       if (!mounted) return;
       _showMessage(_manualWidgetInstallMessage());
@@ -239,7 +224,9 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
   }
 
   String _intervalLabel(Duration interval) {
-    final safeInterval = interval.inMilliseconds > 0 ? interval : const Duration(minutes: 1);
+    final safeInterval = interval.inMilliseconds > 0
+        ? interval
+        : const Duration(minutes: 1);
     if (safeInterval.inSeconds < 60) {
       return '${safeInterval.inSeconds} seconds';
     }
@@ -295,7 +282,10 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
                   padding: const EdgeInsets.all(14),
                   child: Row(
                     children: [
-                      const Icon(Icons.schedule_rounded, color: Color(0xFFF58220)),
+                      const Icon(
+                        Icons.schedule_rounded,
+                        color: Color(0xFFF58220),
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Column(
@@ -303,9 +293,8 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
                           children: [
                             Text(
                               'Rotation interval',
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                              style: Theme.of(context).textTheme.titleSmall
+                                  ?.copyWith(fontWeight: FontWeight.w800),
                             ),
                             Text(
                               'Quote changes every $intervalLabel',
@@ -333,8 +322,11 @@ class _VachanamrutHomePageState extends State<VachanamrutHomePage> {
 
   VachanamrutQuote _quoteForDate(DateTime date, List<VachanamrutQuote> quotes) {
     final interval = widget.settingsService.quoteInterval;
-    final safeIntervalMilliseconds = interval.inMilliseconds > 0 ? interval.inMilliseconds : 60000;
-    final intervalIndex = date.millisecondsSinceEpoch ~/ safeIntervalMilliseconds;
+    final safeIntervalMilliseconds = interval.inMilliseconds > 0
+        ? interval.inMilliseconds
+        : 60000;
+    final intervalIndex =
+        date.millisecondsSinceEpoch ~/ safeIntervalMilliseconds;
     return quotes[intervalIndex % quotes.length];
   }
 }

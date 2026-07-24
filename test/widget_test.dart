@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vachanamrut_app/main.dart';
 import 'package:vachanamrut_app/services/app_settings_service.dart';
+import 'package:vachanamrut_app/services/mukhpath_repository.dart';
+import 'package:vachanamrut_app/services/quote_repository.dart';
+import 'package:vachanamrut_app/services/widget_sync_service.dart';
 import 'package:vachanamrut_app/widgets/mukhpath_page.dart';
 import 'package:vachanamrut_app/widgets/settings_page.dart';
 
@@ -93,6 +97,49 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('To live truthfully and peacefully.'), findsOneWidget);
+  });
+
+  testWidgets('mukhpath settings changes sync English to the Android widget', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      'app_mode': AppMode.mukhpath.name,
+      'widget_content_mode': WidgetContentMode.mukhpath.name,
+    });
+    final widgetPayloads = <Map<dynamic, dynamic>>[];
+    const widgetChannel = MethodChannel('vachanamrut_app/widget');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(widgetChannel, (call) async {
+          if (call.method == 'syncState') {
+            widgetPayloads.add(call.arguments as Map<dynamic, dynamic>);
+          }
+          return null;
+        });
+    addTearDown(() {
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(widgetChannel, null);
+    });
+
+    final service = AppSettingsService();
+    await service.initialize();
+    final quotes = await QuoteRepository.load();
+    final mukhpathItems = MukhpathRepository.loadSampleData();
+
+    await service.setDisplayLanguage(AppLanguage.english);
+    await WidgetSyncService().syncState(
+      settingsService: service,
+      quotes: quotes,
+      mukhpathItems: mukhpathItems,
+    );
+
+    expect(
+      widgetPayloads.any(
+        (payload) =>
+            payload['language'] == AppLanguage.english.name &&
+            payload['widgetContentMode'] == WidgetContentMode.mukhpath.name,
+      ),
+      isTrue,
+    );
   });
 }
 

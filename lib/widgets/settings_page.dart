@@ -30,7 +30,6 @@ class _SettingsPageState extends State<SettingsPage> {
   late Duration _mukhpathInterval;
   late AppLanguage _language;
   late AppMode _appMode;
-  Timer? _settingsChangeTimer;
 
   final _quoteOptions = <Duration>[
     const Duration(minutes: 1),
@@ -71,43 +70,29 @@ class _SettingsPageState extends State<SettingsPage> {
     _appMode = widget.settingsService.appMode;
   }
 
-  @override
-  void dispose() {
-    _settingsChangeTimer?.cancel();
-    super.dispose();
-  }
-
-  void _scheduleSettingsChanged() {
-    _settingsChangeTimer?.cancel();
-    _settingsChangeTimer = Timer(const Duration(milliseconds: 350), () {
-      if (!mounted) return;
-      unawaited(widget.onSettingsChanged?.call());
-    });
-  }
-
   Future<void> _setAppMode(AppMode mode) async {
     if (_appMode == mode) return;
     setState(() => _appMode = mode);
     await widget.settingsService.setModeToggle(mode == AppMode.mukhpath);
-    _scheduleSettingsChanged();
+    await widget.onSettingsChanged?.call();
   }
 
   Future<void> _setQuoteInterval(Duration interval) async {
     setState(() => _quoteInterval = interval);
     await widget.settingsService.setQuoteInterval(interval);
-    _scheduleSettingsChanged();
+    await widget.onSettingsChanged?.call();
   }
 
   Future<void> _setMukhpathInterval(Duration interval) async {
     setState(() => _mukhpathInterval = interval);
     await widget.settingsService.setMukhpathInterval(interval);
-    _scheduleSettingsChanged();
+    await widget.onSettingsChanged?.call();
   }
 
   Future<void> _setLanguage(AppLanguage language) async {
     setState(() => _language = language);
     await widget.settingsService.setDisplayLanguage(language);
-    _scheduleSettingsChanged();
+    await widget.onSettingsChanged?.call();
   }
 
   @override
