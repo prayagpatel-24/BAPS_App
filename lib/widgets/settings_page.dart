@@ -117,10 +117,7 @@ class _SettingsPageState extends State<SettingsPage> {
         : _quoteInterval;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        scrolledUnderElevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Settings'), scrolledUnderElevation: 0),
       body: SafeArea(
         bottom: false,
         child: ListView(
@@ -153,26 +150,30 @@ class _SettingsPageState extends State<SettingsPage> {
                       key: const ValueKey('mukhpath-timing'),
                       icon: Icons.event_repeat_rounded,
                       title: 'Mukhpath Timing',
-                      subtitle: 'Widget refreshes every ${_formatDuration(_mukhpathInterval)}.',
+                      subtitle:
+                          'Widget refreshes every ${_formatDuration(_mukhpathInterval)}.',
                       child: _SettingsDropdown<Duration>(
                         value: _mukhpathInterval,
                         items: _mukhpathOptions,
                         label: 'Refresh interval',
                         itemLabel: _formatDuration,
-                        onChanged: (value) => unawaited(_setMukhpathInterval(value)),
+                        onChanged: (value) =>
+                            unawaited(_setMukhpathInterval(value)),
                       ),
                     )
                   : _SettingsPanel(
                       key: const ValueKey('quote-timing'),
                       icon: Icons.schedule_rounded,
                       title: 'Quote Timing',
-                      subtitle: 'Widget rotates every ${_formatDuration(_quoteInterval)}.',
+                      subtitle:
+                          'Widget rotates every ${_formatDuration(_quoteInterval)}.',
                       child: _SettingsDropdown<Duration>(
                         value: _quoteInterval,
                         items: _quoteOptions,
                         label: 'Rotation interval',
                         itemLabel: _formatDuration,
-                        onChanged: (value) => unawaited(_setQuoteInterval(value)),
+                        onChanged: (value) =>
+                            unawaited(_setQuoteInterval(value)),
                       ),
                     ),
             ),
@@ -324,14 +325,8 @@ class _SettingsHero extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _HeroPill(
-                icon: Icons.schedule_rounded,
-                label: intervalLabel,
-              ),
-              _HeroPill(
-                icon: Icons.translate_rounded,
-                label: languageLabel,
-              ),
+              _HeroPill(icon: Icons.schedule_rounded, label: intervalLabel),
+              _HeroPill(icon: Icons.translate_rounded, label: languageLabel),
             ],
           ),
         ],
@@ -531,37 +526,39 @@ class _ModeSegment extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutCubic,
-          height: 74,
+          constraints: const BoxConstraints(minHeight: 88),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
           decoration: BoxDecoration(
             color: selected ? _SettingsPageState._orange : Colors.transparent,
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: foreground, size: 22),
-              const SizedBox(height: 5),
-              Text(
-                title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: foreground,
-                  fontWeight: FontWeight.w900,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: foreground, size: 22),
+                const SizedBox(height: 5),
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: foreground,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 1),
-              Text(
-                subtitle,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: supporting,
-                  fontWeight: FontWeight.w700,
+                const SizedBox(height: 1),
+                Text(
+                  subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: supporting,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -594,7 +591,10 @@ class _SettingsDropdown<T> extends StatelessWidget {
         labelText: label,
         filled: true,
         fillColor: _SettingsPageState._cream,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: const BorderSide(color: _SettingsPageState._border),

@@ -5,7 +5,8 @@ import '../models/vachanamrut_quote.dart';
 import 'app_settings_service.dart';
 
 class WidgetSyncService {
-  WidgetSyncService({MethodChannel? channel}) : _channel = channel ?? const MethodChannel('vachanamrut_app/widget');
+  WidgetSyncService({MethodChannel? channel})
+    : _channel = channel ?? const MethodChannel('vachanamrut_app/widget');
 
   final MethodChannel _channel;
 
@@ -50,6 +51,8 @@ extension on MukhpathItem {
       'id': id,
       'question': question,
       'answer': answer,
+      'englishQuestion': englishQuestion,
+      'englishAnswer': englishAnswer,
     };
   }
 }

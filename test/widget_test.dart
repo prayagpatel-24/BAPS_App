@@ -3,9 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vachanamrut_app/main.dart';
 import 'package:vachanamrut_app/services/app_settings_service.dart';
+import 'package:vachanamrut_app/widgets/mukhpath_page.dart';
 import 'package:vachanamrut_app/widgets/settings_page.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('shows the Vachanamrut quote experience', (tester) async {
     await tester.pumpWidget(const VachanamrutApp());
     await pumpUntilFound(tester, find.text('Widget Preview'));
@@ -25,9 +30,31 @@ void main() {
     expect(find.text('Vachanamrut Daily'), findsOneWidget);
   });
 
-  testWidgets('opens settings without crashing when intervals are not in the dropdown options', (
+  testWidgets(
+    'opens settings without crashing when intervals are not in the dropdown options',
+    (tester) async {
+      final service = AppSettingsService();
+      await service.initialize();
+
+      await tester.pumpWidget(
+        MaterialApp(home: SettingsPage(settingsService: service)),
+      );
+      await tester.pump();
+
+      expect(find.text('Settings'), findsOneWidget);
+    },
+  );
+
+  testWidgets('settings mode toggle does not overflow on a compact screen', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
+
     final service = AppSettingsService();
     await service.initialize();
 
@@ -36,7 +63,36 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Settings'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('Mukhpath'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mukhpath mode follows the English language setting', (
+    tester,
+  ) async {
+    final service = AppSettingsService();
+    await service.initialize();
+    await service.setDisplayLanguage(AppLanguage.english);
+
+    await tester.pumpWidget(
+      MaterialApp(home: MukhpathPage(settingsService: service)),
+    );
+    await tester.pump();
+
+    expect(
+      find.text('What is the most important rule for a sattvik life?'),
+      findsOneWidget,
+    );
+    expect(find.byWidgetPredicate(_hasGujaratiText), findsNothing);
+
+    await tester.tap(find.text('Reveal answer').first);
+    await tester.pumpAndSettle();
+
+    expect(find.text('To live truthfully and peacefully.'), findsOneWidget);
   });
 }
 

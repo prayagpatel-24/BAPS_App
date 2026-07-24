@@ -21,7 +21,8 @@ class MukhpathPage extends StatefulWidget {
 
 class _MukhpathPageState extends State<MukhpathPage> {
   late final List<MukhpathItem> items = MukhpathRepository.loadSampleData();
-  late final Set<String> completedIds = widget.settingsService.completedMukhpathIds;
+  late final Set<String> completedIds =
+      widget.settingsService.completedMukhpathIds;
   final Map<String, bool> revealedAnswers = <String, bool>{};
 
   Future<void> _openSettings() async {
@@ -39,7 +40,10 @@ class _MukhpathPageState extends State<MukhpathPage> {
 
   @override
   Widget build(BuildContext context) {
-    final visibleItems = items.where((item) => !completedIds.contains(item.id)).toList();
+    final language = widget.settingsService.displayLanguage;
+    final visibleItems = items
+        .where((item) => !completedIds.contains(item.id))
+        .toList();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Mukhpath'),
@@ -68,6 +72,8 @@ class _MukhpathPageState extends State<MukhpathPage> {
               itemBuilder: (context, index) {
                 final item = visibleItems[index];
                 final revealed = revealedAnswers[item.id] ?? false;
+                final question = _localizedQuestion(item, language);
+                final answer = _localizedAnswer(item, language);
                 return Card(
                   child: Padding(
                     padding: const EdgeInsets.all(14),
@@ -78,16 +84,16 @@ class _MukhpathPageState extends State<MukhpathPage> {
                           children: [
                             Expanded(
                               child: Text(
-                                item.question,
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
+                                question,
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800),
                               ),
                             ),
                             Checkbox(
                               value: completedIds.contains(item.id),
                               onChanged: (value) async {
-                                await widget.settingsService.toggleMukhpathCompletion(item.id);
+                                await widget.settingsService
+                                    .toggleMukhpathCompletion(item.id);
                                 setState(() {
                                   if (value == true) {
                                     completedIds.add(item.id);
@@ -107,8 +113,14 @@ class _MukhpathPageState extends State<MukhpathPage> {
                               revealedAnswers[item.id] = !revealed;
                             });
                           },
-                          icon: Icon(revealed ? Icons.visibility_off_rounded : Icons.visibility_rounded),
-                          label: Text(revealed ? 'Hide answer' : 'Reveal answer'),
+                          icon: Icon(
+                            revealed
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                          ),
+                          label: Text(
+                            revealed ? 'Hide answer' : 'Reveal answer',
+                          ),
                         ),
                         if (revealed) ...[
                           const SizedBox(height: 8),
@@ -120,10 +132,9 @@ class _MukhpathPageState extends State<MukhpathPage> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              item.answer,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
+                              answer,
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
                             ),
                           ),
                         ],
@@ -134,6 +145,24 @@ class _MukhpathPageState extends State<MukhpathPage> {
               },
             ),
     );
+  }
+
+  String _localizedQuestion(MukhpathItem item, AppLanguage language) {
+    return switch (language) {
+      AppLanguage.english => item.englishQuestion,
+      AppLanguage.gujarati => item.question,
+      AppLanguage.gujaratiWithEnglish =>
+        '${item.question}\n\n${item.englishQuestion}',
+    };
+  }
+
+  String _localizedAnswer(MukhpathItem item, AppLanguage language) {
+    return switch (language) {
+      AppLanguage.english => item.englishAnswer,
+      AppLanguage.gujarati => item.answer,
+      AppLanguage.gujaratiWithEnglish =>
+        '${item.answer}\n\n${item.englishAnswer}',
+    };
   }
 }
 
@@ -154,7 +183,9 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               'All Mukhpath prompts are complete.',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 8),
             TextButton(onPressed: onReset, child: const Text('Reset progress')),

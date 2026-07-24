@@ -145,11 +145,23 @@ private data class WidgetState(
     fun mukhpathContentForNow(): WidgetContent {
         val visibleItems = mukhpathItems.filterNot { completedMukhpathIds.contains(it.id) }
         val item = visibleItems.mukhpathForNow(mukhpathIntervalMinutes)
-        return WidgetContent(
-            kicker = "Mukhpath",
-            body = item.question,
-            reference = item.answer,
-        )
+        return when (language) {
+            "english" -> WidgetContent(
+                kicker = "Mukhpath",
+                body = item.englishQuestion,
+                reference = item.englishAnswer,
+            )
+            "gujaratiWithEnglish" -> WidgetContent(
+                kicker = "Mukhpath",
+                body = "${item.question}\n\n${item.englishQuestion}",
+                reference = "${item.answer}\n\n${item.englishAnswer}",
+            )
+            else -> WidgetContent(
+                kicker = "Mukhpath",
+                body = item.question,
+                reference = item.answer,
+            )
+        }
     }
 
     companion object {
@@ -187,6 +199,8 @@ private data class MukhpathItem(
     val id: String,
     val question: String,
     val answer: String,
+    val englishQuestion: String,
+    val englishAnswer: String,
 )
 
 private fun List<VachanamrutQuote>.quoteForNow(intervalMinutes: Int): VachanamrutQuote {
@@ -197,7 +211,7 @@ private fun List<VachanamrutQuote>.quoteForNow(intervalMinutes: Int): Vachanamru
 }
 
 private fun List<MukhpathItem>.mukhpathForNow(intervalMinutes: Int): MukhpathItem {
-    if (isEmpty()) return MukhpathItem("", "No Mukhpath items available.", "")
+    if (isEmpty()) return MukhpathItem("", "No Mukhpath items available.", "", "No Mukhpath items available.", "")
     val intervalMillis = intervalMinutes.coerceAtLeast(1) * 60L * 1000L
     val index = ((System.currentTimeMillis() / intervalMillis) % size).toInt()
     return this[index]
@@ -224,6 +238,8 @@ private fun parseMukhpath(json: String): List<MukhpathItem> {
             id = item.optString("id", ""),
             question = item.optString("question", ""),
             answer = item.optString("answer", ""),
+            englishQuestion = item.optString("englishQuestion", item.optString("question", "")),
+            englishAnswer = item.optString("englishAnswer", item.optString("answer", "")),
         )
     }
 }

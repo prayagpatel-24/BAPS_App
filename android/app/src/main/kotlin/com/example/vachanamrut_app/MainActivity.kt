@@ -96,6 +96,8 @@ class MainActivity : FlutterActivity() {
                 json.put("id", map?.get("id") as? String ?: "")
                 json.put("question", map?.get("question") as? String ?: "")
                 json.put("answer", map?.get("answer") as? String ?: "")
+                json.put("englishQuestion", map?.get("englishQuestion") as? String ?: "")
+                json.put("englishAnswer", map?.get("englishAnswer") as? String ?: "")
                 array.put(json)
             }
             editor.putString("mukhpathJson", array.toString())

@@ -7,7 +7,9 @@ enum WidgetContentMode { vachanamrut, mukhpath }
 enum AppLanguage { english, gujarati, gujaratiWithEnglish }
 
 class AppSettingsService {
-  AppSettingsService({SharedPreferences? preferences}) : _preferences = preferences;
+  AppSettingsService({SharedPreferences? preferences}) {
+    _preferences = preferences;
+  }
 
   static const _quoteIntervalKey = 'quote_interval_minutes';
   static const _displayLanguageKey = 'display_language';
@@ -57,9 +59,7 @@ class AppSettingsService {
   }
 
   Set<String> get completedMukhpathIds {
-    return _preferences
-            ?.getStringList(_completedMukhpathKey)
-            ?.toSet() ??
+    return _preferences?.getStringList(_completedMukhpathKey)?.toSet() ??
         <String>{};
   }
 
@@ -111,10 +111,13 @@ class AppSettingsService {
   Future<void> setModeToggle(bool enabled) async {
     await initialize();
     final appMode = enabled ? AppMode.mukhpath : AppMode.vachanamrut;
-    final widgetMode = enabled ? WidgetContentMode.mukhpath : WidgetContentMode.vachanamrut;
+    final widgetMode = enabled
+        ? WidgetContentMode.mukhpath
+        : WidgetContentMode.vachanamrut;
     final currentAppMode = _preferences!.getString(_appModeKey);
     final currentWidgetMode = _preferences!.getString(_widgetContentModeKey);
-    if (currentAppMode == appMode.name && currentWidgetMode == widgetMode.name) {
+    if (currentAppMode == appMode.name &&
+        currentWidgetMode == widgetMode.name) {
       return;
     }
     await _preferences!.setString(_appModeKey, appMode.name);
